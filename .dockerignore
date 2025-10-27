@@ -1,0 +1,11 @@
+.git
+.next
+node_modules
+dist
+coverage
+*.log
+.env*
+bun.lock
+bun.lockb
+pnpm-store
+.pnpm-debug.log
