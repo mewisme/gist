@@ -1,6 +1,6 @@
 {
   "name": "gist",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A Gist-like platform for sharing code snippets with syntax highlighting, versioning, and collaboration features.",
   "author": "https://github.com/mewisme",
   "license": "MIT",
