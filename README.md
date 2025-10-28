@@ -70,14 +70,16 @@ The SQLite database will be created automatically in the `./data/` directory. Ge
 
 ```bash
 pnpm run db:generate      # Generate migrations from schema (includes FTS5 automatically)
-pnpm run db:migrate       # Apply migrations to database
+pnpm run db:migrate:all   # Apply all migrations (schema + custom migrations)
 ```
 
-**If upgrading from an older version**, run the subscriptions/notifications migration:
+**Note:** `db:migrate:all` runs all migrations including:
+- Drizzle schema migrations
+- FTS5 full-text search
+- Subscriptions & notifications
+- All other custom migrations
 
-```bash
-npx tsx scripts/migrate-subscriptions-notifications.ts
-```
+For Docker deployments, migrations run automatically on container startup. See [Migration Guide](docs/MIGRATION_QUICK_START.md).
 
 Seed the database with demo data:
 
@@ -205,6 +207,8 @@ docker-compose logs -f
 
 The application will be available at `http://localhost:3000`.
 
+**🔄 Automatic Migrations:** Database migrations run automatically on container startup. No manual intervention needed for updates! See [Migration Quick Start](docs/MIGRATION_QUICK_START.md) for details.
+
 ### Docker Compose Commands
 
 ```bash
@@ -261,8 +265,9 @@ pnpm build              # Build for production
 pnpm start              # Start production server
 
 # Database
-pnpm run db:generate    # Generate migrations
-pnpm run db:migrate     # Apply migrations
+pnpm run db:generate    # Generate migrations from schema
+pnpm run db:migrate:all # Apply all migrations (recommended)
+pnpm run db:migrate     # Apply Drizzle schema migrations only
 pnpm run db:studio      # Open Drizzle Studio
 pnpm run seed           # Seed database with demo data
 
@@ -423,9 +428,10 @@ src/
 
 ## Documentation
 
+- [Migration Quick Start](docs/MIGRATION_QUICK_START.md) - Quick reference for database migrations in Docker
+- [Docker Migrations Guide](docs/DOCKER_MIGRATIONS.md) - Comprehensive database migration guide for Docker
 - [FTS5 Full-Text Search](docs/FTS5_SEARCH.md) - Full-text search implementation guide
 - [Docker Deployment](DOCKER.md) - Docker deployment instructions
-- [OG Cards](docs/OG_CARDS.md) - Open Graph card generation
 - [Subscriptions & Notifications](docs/SUBSCRIPTIONS_NOTIFICATIONS.md) - Subscription and notification system
 - [Notification UI](docs/NOTIFICATION_UI_FEATURE.md) - Notification bell icon and page
 

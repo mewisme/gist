@@ -76,11 +76,15 @@ COPY --from=builder /app/node_modules ./node_modules
 # Create data directory for SQLite with proper permissions
 RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data
 
-# Create init script
+# Copy migration scripts
+COPY --from=builder /app/scripts ./scripts
+
+# Create init script with comprehensive migrations
 RUN echo '#!/bin/sh' > /app/init.sh && \
-  echo 'echo "Running database migrations..."' >> /app/init.sh && \
-  echo 'pnpm drizzle-kit migrate --config=drizzle.config.ts' >> /app/init.sh && \
-  echo 'echo "Starting application..."' >> /app/init.sh && \
+  echo 'echo "🚀 Running database migrations..."' >> /app/init.sh && \
+  echo 'pnpm run db:migrate:all' >> /app/init.sh && \
+  echo 'echo "✅ Migrations complete!"' >> /app/init.sh && \
+  echo 'echo "🚀 Starting application..."' >> /app/init.sh && \
   echo 'exec pnpm start' >> /app/init.sh && \
   chmod +x /app/init.sh && \
   chown nextjs:nodejs /app/init.sh
