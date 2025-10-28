@@ -2,7 +2,7 @@
 
 Quick reference for running database migrations in Docker deployments.
 
-## 🚀 TL;DR - Most Common Use Cases
+## >> TL;DR - Most Common Use Cases
 
 ### Deploy New Version (Automatic Migrations)
 
@@ -10,7 +10,7 @@ Quick reference for running database migrations in Docker deployments.
 # Migrations run automatically on startup!
 docker-compose pull
 docker-compose up -d
-docker-compose logs -f gist  # Watch for "✅ All migrations completed"
+docker-compose logs -f gist  # Watch for "[SUCCESS] All migrations completed"
 ```
 
 ### Run Migrations Manually
@@ -29,7 +29,7 @@ docker cp gist:/app/data/sqlite.db ./backup-$(date +%Y%m%d-%H%M%S).db
 
 ---
 
-## 📋 Common Commands
+## [COMMANDS] Common Commands
 
 | Task | Command |
 |------|---------|
@@ -44,7 +44,7 @@ docker cp gist:/app/data/sqlite.db ./backup-$(date +%Y%m%d-%H%M%S).db
 
 ---
 
-## 🔄 Migration Types
+## [TYPES] Migration Types
 
 Your app has **4 migration types** that run automatically:
 
@@ -57,7 +57,7 @@ All handled by: `pnpm run db:migrate:all`
 
 ---
 
-## ⚡ Quick Troubleshooting
+## [HELP] Quick Troubleshooting
 
 ### Container won't start after update
 
@@ -90,25 +90,25 @@ docker-compose restart gist
 
 ---
 
-## 🎯 Best Practices
+## [BEST] Best Practices
 
-1. ✅ **Always backup before major updates**
+1. [✓] **Always backup before major updates**
    ```bash
    docker cp gist:/app/data/sqlite.db ./backup-$(date +%Y%m%d).db
    ```
 
-2. ✅ **Monitor deployment logs**
+2. [✓] **Monitor deployment logs**
    ```bash
    docker-compose logs -f gist
    ```
 
-3. ✅ **Test locally first**
+3. [✓] **Test locally first**
    ```bash
    # Copy prod DB and test migration locally
    DATABASE_URL=./test.db pnpm run db:migrate:all
    ```
 
-4. ✅ **Verify after deployment**
+4. [✓] **Verify after deployment**
    ```bash
    # Check app is running
    curl http://localhost:7209/
@@ -119,7 +119,7 @@ docker-compose restart gist
 
 ---
 
-## 📦 Update Workflow Example
+## [WORKFLOW] Update Workflow Example
 
 Complete workflow for deploying a new version:
 
@@ -142,19 +142,19 @@ curl http://localhost:7209/
 
 **Expected output in logs:**
 ```
-🚀 Running database migrations...
-📦 Step 1: Drizzle schema migrations
-   ✓ Schema migrations completed
-📦 Step 2: FTS5 Full-Text Search Migration
-   ⏭️  FTS5 table already exists - skipping
+>> Running database migrations...
+[1/4] Step 1: Drizzle schema migrations
+      [✓] Schema migrations completed
+[2/4] Step 2: FTS5 Full-Text Search Migration
+      [SKIP] FTS5 table already exists - skipping
 ...
-✅ All migrations completed successfully!
-🚀 Starting application...
+[SUCCESS] All migrations completed successfully!
+>> Starting application...
 ```
 
 ---
 
-## 🆘 Emergency Rollback
+## [ROLLBACK] Emergency Rollback
 
 If something goes wrong:
 
@@ -176,13 +176,13 @@ curl http://localhost:7209/
 
 ---
 
-## 📖 More Details
+## [DOCS] More Details
 
 For comprehensive documentation, see: [DOCKER_MIGRATIONS.md](./DOCKER_MIGRATIONS.md)
 
 ---
 
-## 💡 Remember
+## [REMEMBER] Key Points
 
 - Migrations run **automatically** on container startup
 - Migrations are **idempotent** (safe to run multiple times)

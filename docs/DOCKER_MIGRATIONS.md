@@ -148,7 +148,6 @@ pnpm run db:generate:base      # Generate without FTS5
 # Run migrations
 pnpm run db:migrate:all        # Run ALL migrations (recommended)
 pnpm run db:migrate            # Run Drizzle schema migrations only
-pnpm run db:migrate:fts5       # Run FTS5 migration only
 
 # Database tools
 pnpm run db:studio             # Open Drizzle Studio (not in production!)
@@ -157,38 +156,17 @@ pnpm run seed                  # Seed database with test data
 
 ### Migration Script Details
 
-#### 1. `scripts/migrate-all.ts` (Comprehensive)
+#### `scripts/migrate-all.ts` (Comprehensive)
 
 Runs ALL migrations in the correct order:
-- ✅ Drizzle schema migrations
-- ✅ FTS5 full-text search
-- ✅ Subscriptions & notifications tables
-- ✅ User followed notification type
-- ✅ Idempotent (safe to run multiple times)
-- ✅ Automatic verification
+- [✓] Drizzle schema migrations
+- [✓] FTS5 full-text search
+- [✓] Subscriptions & notifications tables
+- [✓] User followed notification type
+- [✓] Idempotent (safe to run multiple times)
+- [✓] Automatic verification
 
-**When to use:** Always use this for production deployments.
-
-#### 2. `scripts/migrate-fts5.ts`
-
-Only adds FTS5 full-text search:
-```bash
-docker exec -it gist tsx scripts/migrate-fts5.ts
-```
-
-#### 3. `scripts/migrate-subscriptions-notifications.ts`
-
-Only adds subscriptions and notifications:
-```bash
-docker exec -it gist tsx scripts/migrate-subscriptions-notifications.ts
-```
-
-#### 4. `scripts/migrate-user-followed-notification.ts`
-
-Only adds user_followed notification type:
-```bash
-docker exec -it gist tsx scripts/migrate-user-followed-notification.ts
-```
+**When to use:** Always use this for all deployments.
 
 ---
 

@@ -20,7 +20,6 @@
     "db:generate:base": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:migrate:all": "pnpm run db:migrate && tsx scripts/migrate-all.ts",
-    "db:migrate:fts5": "tsx scripts/migrate-fts5.ts",
     "db:studio": "drizzle-kit studio",
     "seed": "tsx scripts/seed.ts"
   },

@@ -1,4 +1,5 @@
 #!/usr/bin/env tsx
+
 import Database from 'better-sqlite3';
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -10,37 +11,37 @@ import { join } from 'path';
 
 const dbPath = './data/sqlite.db';
 
-console.log('🚀 Starting comprehensive database migration...\n');
+console.log('>> Starting comprehensive database migration...\n');
 
 try {
   const db = new Database(dbPath);
-  
+
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
 
   // ==================================================================
   // STEP 1: Run Drizzle Kit migrations (schema changes)
   // ==================================================================
-  console.log('📦 Step 1: Drizzle schema migrations');
-  console.log('   This step is handled by drizzle-kit migrate');
-  console.log('   ✓ Schema migrations completed\n');
+  console.log('[1/4] Step 1: Drizzle schema migrations');
+  console.log('      This step is handled by drizzle-kit migrate');
+  console.log('      [✓] Schema migrations completed\n');
 
   // ==================================================================
   // STEP 2: Add FTS5 search functionality
   // ==================================================================
-  console.log('📦 Step 2: FTS5 Full-Text Search Migration');
+  console.log('[2/4] Step 2: FTS5 Full-Text Search Migration');
   
   const checkFts = db.prepare(
     "SELECT name FROM sqlite_master WHERE type='table' AND name='gists_fts'"
   ).get();
 
   if (checkFts) {
-    console.log('   ⏭️  FTS5 table already exists - skipping\n');
+    console.log('      [SKIP] FTS5 table already exists - skipping\n');
   } else {
-    console.log('   🔄 Creating FTS5 virtual table...');
+    console.log('      [RUN] Creating FTS5 virtual table...');
     const migrationPath = './drizzle/0001_add_fts5_search.sql';
     const migrationSql = readFileSync(join(process.cwd(), migrationPath), 'utf-8');
-    
+
     const statements = migrationSql
       .split('--> statement-breakpoint')
       .map(s => s.trim())
@@ -53,13 +54,13 @@ try {
     })();
 
     const count = db.prepare('SELECT COUNT(*) as count FROM gists_fts').get() as { count: number };
-    console.log(`   ✓ FTS5 created and indexed ${count.count} gist(s)\n`);
+    console.log(`      [✓] FTS5 created and indexed ${count.count} gist(s)\n`);
   }
 
   // ==================================================================
   // STEP 3: Add subscriptions and notifications tables
   // ==================================================================
-  console.log('📦 Step 3: Subscriptions & Notifications Migration');
+  console.log('[3/4] Step 3: Subscriptions & Notifications Migration');
   
   const checkSubscriptions = db.prepare(
     "SELECT name FROM sqlite_master WHERE type='table' AND name='subscriptions'"
@@ -70,9 +71,9 @@ try {
   ).get();
 
   if (checkSubscriptions && checkNotifications) {
-    console.log('   ⏭️  Tables already exist - skipping\n');
+    console.log('      [SKIP] Tables already exist - skipping\n');
   } else {
-    console.log('   🔄 Creating subscriptions and notifications tables...');
+    console.log('      [RUN] Creating subscriptions and notifications tables...');
     db.exec('BEGIN TRANSACTION');
 
     try {
@@ -84,7 +85,7 @@ try {
         db.exec(`ALTER TABLE stars ADD COLUMN created_at INTEGER;`);
         const now = Math.floor(Date.now() / 1000);
         db.exec(`UPDATE stars SET created_at = ${now} WHERE created_at IS NULL;`);
-        console.log('   ✓ Added created_at to stars table');
+        console.log('      [✓] Added created_at to stars table');
       }
 
       // Create subscriptions table
@@ -105,7 +106,7 @@ try {
           CREATE INDEX subscriptions_target_gist_idx ON subscriptions(target_gist_id);
           CREATE INDEX subscriptions_subscriber_idx ON subscriptions(subscriber_id);
         `);
-        console.log('   ✓ Created subscriptions table');
+        console.log('      [✓] Created subscriptions table');
       }
 
       // Create notifications table
@@ -129,11 +130,11 @@ try {
           CREATE INDEX notifications_gist_idx ON notifications(gist_id);
           CREATE INDEX notifications_actor_idx ON notifications(actor_id);
         `);
-        console.log('   ✓ Created notifications table');
+        console.log('      [✓] Created notifications table');
       }
 
       db.exec('COMMIT');
-      console.log('   ✓ Migration completed\n');
+      console.log('      [✓] Migration completed\n');
     } catch (error) {
       db.exec('ROLLBACK');
       throw error;
@@ -143,20 +144,20 @@ try {
   // ==================================================================
   // STEP 4: Update notifications to support user_followed type
   // ==================================================================
-  console.log('📦 Step 4: User Followed Notification Type');
+  console.log('[4/4] Step 4: User Followed Notification Type');
   
   // Check if user_followed is already supported
   const tableInfo = db.pragma('table_info(notifications)') as Array<{ name: string; type: string }>;
   const typeColumn = tableInfo.find(col => col.name === 'type');
   
   if (typeColumn && typeColumn.type.includes('user_followed')) {
-    console.log('   ⏭️  user_followed type already supported - skipping\n');
+    console.log('      [SKIP] user_followed type already supported - skipping\n');
   } else {
-    console.log('   🔄 Adding user_followed notification type...');
-    
+    console.log('      [RUN] Adding user_followed notification type...');
+
     // Check if notifications table has any data to migrate
     const hasData = db.prepare('SELECT COUNT(*) as count FROM notifications').get() as { count: number };
-    
+
     if (hasData.count > 0) {
       // Need to recreate table with updated CHECK constraint
       db.exec('BEGIN TRANSACTION');
@@ -192,20 +193,20 @@ try {
         `);
 
         db.exec('COMMIT');
-        console.log('   ✓ user_followed type added with data migration\n');
+        console.log('      [✓] user_followed type added with data migration\n');
       } catch (error) {
         db.exec('ROLLBACK');
         throw error;
       }
     } else {
-      console.log('   ⏭️  No existing data - type will be created correctly\n');
+      console.log('      [SKIP] No existing data - type will be created correctly\n');
     }
   }
 
   // ==================================================================
   // Final verification
   // ==================================================================
-  console.log('📦 Final Verification');
+  console.log('>> Final Verification');
   
   const tables = [
     'gists_fts',
@@ -221,26 +222,26 @@ try {
   });
 
   if (allExist) {
-    console.log('   ✓ All required tables exist');
+    console.log('   [✓] All required tables exist');
     
     // Count records
     const gistCount = db.prepare('SELECT COUNT(*) as count FROM gists_fts').get() as { count: number };
     const subsCount = db.prepare('SELECT COUNT(*) as count FROM subscriptions').get() as { count: number };
     const notifCount = db.prepare('SELECT COUNT(*) as count FROM notifications').get() as { count: number };
     
-    console.log(`   ✓ FTS5: ${gistCount.count} indexed gists`);
-    console.log(`   ✓ Subscriptions: ${subsCount.count} active`);
-    console.log(`   ✓ Notifications: ${notifCount.count} total`);
+    console.log(`   [✓] FTS5: ${gistCount.count} indexed gists`);
+    console.log(`   [✓] Subscriptions: ${subsCount.count} active`);
+    console.log(`   [✓] Notifications: ${notifCount.count} total`);
   } else {
     throw new Error('Some required tables are missing!');
   }
 
   db.close();
   
-  console.log('\n✅ All migrations completed successfully!\n');
-  
+  console.log('\n[SUCCESS] All migrations completed successfully!\n');
+
 } catch (error) {
-  console.error('\n❌ Migration failed:', error);
+  console.error('\n[ERROR] Migration failed:', error);
   process.exit(1);
 }
 

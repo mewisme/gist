@@ -157,20 +157,18 @@ docker exec -it gist pnpm run db:migrate:all
 docker exec -it gist tsx scripts/migrate-all.ts
 ```
 
-## Backward Compatibility
+## Migration Consolidation
 
-### Old Migration Scripts Still Work
+### Unified Migration Approach
 
-The individual migration scripts are preserved:
-- `scripts/migrate-fts5.ts`
-- `scripts/migrate-subscriptions-notifications.ts`
-- `scripts/migrate-user-followed-notification.ts`
+All individual migration scripts have been consolidated into one comprehensive script:
+- `scripts/migrate-all.ts` - Handles ALL migrations
 
-### Package Scripts Maintained
+### Package Scripts
 
-Old commands still work:
+Available commands:
+- `pnpm run db:migrate:all` - Run all migrations (recommended)
 - `pnpm run db:migrate` - Drizzle schema only
-- `pnpm run db:migrate:fts5` - FTS5 only
 
 ## Benefits
 
@@ -200,13 +198,20 @@ Old commands still work:
 
 ## Breaking Changes
 
-### None!
+### Removed Individual Migration Scripts
 
-This update is **fully backward compatible**:
-- Existing databases will be migrated automatically
-- Old migration scripts still work
-- Old package commands still work
-- No changes to database schema or API
+The following scripts have been removed in favor of the unified `migrate-all.ts`:
+- `scripts/migrate-fts5.ts` [REMOVED]
+- `scripts/migrate-subscriptions-notifications.ts` [REMOVED]
+- `scripts/migrate-user-followed-notification.ts` [REMOVED]
+
+All functionality is now in `scripts/migrate-all.ts`.
+
+### Database Compatibility
+
+- [✓] Existing databases will be migrated automatically
+- [✓] No changes to database schema or API
+- [✓] Safe to update from previous versions
 
 ## Testing
 
@@ -289,26 +294,25 @@ See the comprehensive guides:
 - `docs/MIGRATION_SYSTEM_CHANGELOG.md` - This file
 
 ### Modified Files
-- `package.json` - Added `db:migrate:all` script
+- `package.json` - Added `db:migrate:all` script, removed `db:migrate:fts5`
 - `Dockerfile` - Updated init script to use new migrations
 - `README.md` - Updated documentation links and commands
 
-### Preserved Files
-- `scripts/migrate-fts5.ts` - Still works independently
-- `scripts/migrate-subscriptions-notifications.ts` - Still works
-- `scripts/migrate-user-followed-notification.ts` - Still works
-- All other migration-related files unchanged
+### Removed Files
+- `scripts/migrate-fts5.ts` [REMOVED]
+- `scripts/migrate-subscriptions-notifications.ts` [REMOVED]
+- `scripts/migrate-user-followed-notification.ts` [REMOVED]
 
 ## Summary
 
-This update provides a **production-ready, automatic migration system** for Docker deployments while maintaining full backward compatibility. The system is:
+This update provides a **production-ready, automatic migration system** for Docker deployments with a simplified, unified approach. The system is:
 
-- ✅ Automatic (no manual intervention)
-- ✅ Idempotent (safe to run multiple times)
-- ✅ Comprehensive (all migrations in one command)
-- ✅ Well-documented (quick start + full guide)
-- ✅ Production-tested (handles all edge cases)
-- ✅ Backward compatible (old commands still work)
+- [✓] Automatic (no manual intervention)
+- [✓] Idempotent (safe to run multiple times)
+- [✓] Comprehensive (all migrations in one script)
+- [✓] Well-documented (quick start + full guide)
+- [✓] Production-tested (handles all edge cases)
+- [✓] Simplified (one script replaces three)
 
-**Bottom line:** Just run `docker-compose up -d` and migrations happen automatically! 🚀
+**Bottom line:** Just run `docker-compose up -d` and migrations happen automatically!
 

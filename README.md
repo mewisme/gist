@@ -4,16 +4,16 @@ A modern, full-featured code sharing platform built with Next.js 16, Drizzle ORM
 
 ## Features
 
-- 🔐 **Secure Authentication** - JWT-based authentication with bcrypt password hashing
-- 📝 **Multi-file Gists** - Create gists with multiple files and languages
-- 🎨 **Syntax Highlighting** - Beautiful code highlighting with Shiki
-- ⭐ **Social Features** - Star, fork, and comment on gists
-- 🔔 **Subscriptions & Notifications** - Subscribe to users or gists and get real-time notifications
-- 🔍 **FTS5 Full-Text Search** - Fast, indexed search with SQLite FTS5 extension
-- 📱 **Responsive Design** - Works perfectly on desktop and mobile
-- 🐳 **Docker Ready** - Easy deployment with Docker and docker-compose
-- 🌙 **Dark Mode** - Beautiful dark and light themes
-- 💾 **Cache Management** - Intelligent caching for better performance
+- [AUTH] **Secure Authentication** - JWT-based authentication with bcrypt password hashing
+- [CODE] **Multi-file Gists** - Create gists with multiple files and languages
+- [UI] **Syntax Highlighting** - Beautiful code highlighting with Shiki
+- [SOCIAL] **Social Features** - Star, fork, and comment on gists
+- [NOTIFY] **Subscriptions & Notifications** - Subscribe to users or gists and get real-time notifications
+- [SEARCH] **FTS5 Full-Text Search** - Fast, indexed search with SQLite FTS5 extension
+- [MOBILE] **Responsive Design** - Works perfectly on desktop and mobile
+- [DOCKER] **Docker Ready** - Easy deployment with Docker and docker-compose
+- [THEME] **Dark Mode** - Beautiful dark and light themes
+- [CACHE] **Cache Management** - Intelligent caching for better performance
 
 ## Tech Stack
 
@@ -207,7 +207,7 @@ docker-compose logs -f
 
 The application will be available at `http://localhost:3000`.
 
-**🔄 Automatic Migrations:** Database migrations run automatically on container startup. No manual intervention needed for updates! See [Migration Quick Start](docs/MIGRATION_QUICK_START.md) for details.
+**[AUTO] Automatic Migrations:** Database migrations run automatically on container startup. No manual intervention needed for updates! See [Migration Quick Start](docs/MIGRATION_QUICK_START.md) for details.
 
 ### Docker Compose Commands
 
