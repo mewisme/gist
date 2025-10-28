@@ -14,7 +14,6 @@ export interface OGImageProps {
   type?: 'gist' | 'user' | 'default';
 }
 
-// Helper to load logo
 async function getLogoDataUrl() {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';

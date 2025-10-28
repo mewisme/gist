@@ -90,7 +90,6 @@ export function ImportGistPageClient() {
 
       const gist: GitHubGist = await response.json();
 
-      // Fetch file contents
       const filesWithContent = await Promise.all(
         Object.entries(gist.files).map(async ([filename, file]) => {
           try {

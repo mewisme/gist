@@ -211,57 +211,42 @@ export function UserProfile({ userId }: { userId: number }) {
         gistId: demoGists[1].id,
         filename: 'utility-types.ts',
         language: 'typescript',
-        content: `// Utility types for common TypeScript patterns
-
-// Make all properties optional
-export type Partial<T> = {
+        content: `export type Partial<T> = {
   [P in keyof T]?: T[P];
 };
 
-// Make all properties required
 export type Required<T> = {
   [P in keyof T]-?: T[P];
 };
 
-// Pick specific properties
 export type Pick<T, K extends keyof T> = {
   [P in K]: T[P];
 };
 
-// Omit specific properties
 export type Omit<T, K extends keyof any> = Pick<T, Exclude<keyof T, K>>;
 
-// Extract values from union type
 export type Extract<T, U> = T extends U ? T : never;
 
-// Exclude values from union type
 export type Exclude<T, U> = T extends U ? never : T;
 
-// Non-nullable type
 export type NonNullable<T> = T extends null | undefined ? never : T;
 
-// Function return type
 export type ReturnType<T extends (...args: any) => any> = 
   T extends (...args: any) => infer R ? R : any;
 
-// Function parameters type
 export type Parameters<T extends (...args: any) => any> = 
   T extends (...args: infer P) => any ? P : never;
 
-// Constructor parameters type
 export type ConstructorParameters<T extends new (...args: any) => any> = 
   T extends new (...args: infer P) => any ? P : never;
 
-// Instance type
 export type InstanceType<T extends new (...args: any) => any> = 
   T extends new (...args: any) => infer R ? R : any;
 
-// Deep partial
 export type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
 };
 
-// Deep readonly
 export type DeepReadonly<T> = {
   readonly [P in keyof T]: T[P] extends object ? DeepReadonly<T[P]> : T[P];
 };`,
@@ -279,17 +264,15 @@ export type DeepReadonly<T> = {
 const RedisStore = require('rate-limit-redis');
 const Redis = require('redis');
 
-// Create Redis client
 const redisClient = Redis.createClient({
   host: process.env.REDIS_HOST || 'localhost',
   port: process.env.REDIS_PORT || 6379,
 });
 
-// Rate limiter middleware
 const createRateLimiter = (options = {}) => {
   const defaultOptions = {
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 requests per windowMs
+    windowMs: 15 * 60 * 1000,
+    max: 100,
     message: 'Too many requests from this IP, please try again later.',
     standardHeaders: true,
     legacyHeaders: false,
@@ -303,21 +286,20 @@ const createRateLimiter = (options = {}) => {
   return rateLimit(defaultOptions);
 };
 
-// Different rate limiters for different endpoints
 const generalLimiter = createRateLimiter({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 15 * 60 * 1000,
   max: 100,
 });
 
 const authLimiter = createRateLimiter({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // stricter limit for auth endpoints
+  windowMs: 15 * 60 * 1000,
+  max: 5,
   message: 'Too many authentication attempts, please try again later.',
 });
 
 const apiLimiter = createRateLimiter({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 60, // 60 requests per minute
+  windowMs: 1 * 60 * 1000,
+  max: 60,
 });
 
 module.exports = {
@@ -340,27 +322,21 @@ const { generalLimiter, authLimiter, apiLimiter } = require('./rateLimiter');
 
 const app = express();
 
-// Apply general rate limiting to all routes
 app.use(generalLimiter);
 
-// Apply stricter rate limiting to auth routes
 app.use('/auth', authLimiter);
 
-// Apply API rate limiting to API routes
 app.use('/api', apiLimiter);
 
-// Routes
 app.get('/', (req, res) => {
   res.json({ message: 'Hello World!' });
 });
 
 app.post('/auth/login', (req, res) => {
-  // Login logic here
   res.json({ message: 'Login successful' });
 });
 
 app.get('/api/users', (req, res) => {
-  // Get users logic here
   res.json({ users: [] });
 });
 
@@ -399,10 +375,8 @@ npm install express-rate-limit rate-limit-redis redis
 \`\`\`javascript
 const { generalLimiter, authLimiter, apiLimiter } = require('./rateLimiter');
 
-// Apply to all routes
 app.use(generalLimiter);
 
-// Apply to specific route groups
 app.use('/auth', authLimiter);
 app.use('/api', apiLimiter);
 \`\`\`

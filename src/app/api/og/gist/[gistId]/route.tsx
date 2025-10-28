@@ -35,11 +35,10 @@ export async function GET(
     const description =
       gist.description || `A ${gist.visibility} gist by ${gist.owner.displayName}`;
 
-    // Get language tags from files
-    const tags = gist.files
-      ?.map((file: any) => file.language)
+    const tags = [...new Set(gist.files
+      ?.map((file: { language: string }) => file.language)
       .filter((lang: string) => lang && lang !== 'text')
-      .slice(0, 4) || [];
+      .slice(0, 4) || [])] as string[];
 
     return generateOGImage({
       title,

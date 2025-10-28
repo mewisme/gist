@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { AuthButton } from '@/components/auth/auth-button';
+import { NotificationButton } from '@/components/notifications/notification-button';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -61,6 +62,7 @@ export function Navigation() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
+              <NotificationButton />
               <AuthButton />
             </div>
           </div>
@@ -165,6 +167,7 @@ export function Navigation() {
                   </DropdownMenuContent>
                 </ButtonGroup>
               </DropdownMenu>
+              <NotificationButton />
               <AuthButton />
             </div>
           </div>

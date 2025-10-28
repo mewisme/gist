@@ -232,10 +232,100 @@ export const stars = sqliteTable(
     gistId: text('gist_id')
       .notNull()
       .references(() => gists.id, { onDelete: 'cascade' }),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.userId, table.gistId] }),
     gistIdx: index('stars_gist_idx').on(table.gistId),
+  })
+);
+
+// Subscriptions table - supports both user-to-user and user-to-gist subscriptions
+export const subscriptions = sqliteTable(
+  'subscriptions',
+  {
+    id: text('id').primaryKey(),
+    subscriberId: text('subscriber_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    // Either targetUserId or targetGistId should be set, not both
+    targetUserId: text('target_user_id')
+      .references(() => users.id, { onDelete: 'cascade' }),
+    targetGistId: text('target_gist_id')
+      .references(() => gists.id, { onDelete: 'cascade' }),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => ({
+    // Composite unique indexes to prevent duplicate subscriptions
+    subscriberUserIdx: unique('subscriptions_subscriber_user_idx').on(
+      table.subscriberId,
+      table.targetUserId
+    ),
+    subscriberGistIdx: unique('subscriptions_subscriber_gist_idx').on(
+      table.subscriberId,
+      table.targetGistId
+    ),
+    // Index for finding all subscribers of a user
+    targetUserIdx: index('subscriptions_target_user_idx').on(table.targetUserId),
+    // Index for finding all subscribers of a gist
+    targetGistIdx: index('subscriptions_target_gist_idx').on(table.targetGistId),
+    // Index for finding all subscriptions by a user
+    subscriberIdx: index('subscriptions_subscriber_idx').on(table.subscriberId),
+  })
+);
+
+// Notifications table
+export const notifications = sqliteTable(
+  'notifications',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    type: text('type', {
+      enum: ['gist_created', 'gist_updated', 'gist_starred', 'gist_unstarred', 'gist_commented', 'gist_forked', 'user_followed'],
+    }).notNull(),
+    // Actor who performed the action
+    actorId: text('actor_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    // Related gist
+    gistId: text('gist_id')
+      .references(() => gists.id, { onDelete: 'cascade' }),
+    // Related comment (if type is gist_commented)
+    commentId: text('comment_id')
+      .references(() => comments.id, { onDelete: 'cascade' }),
+    // Additional metadata (JSON)
+    metadata: text('metadata', { mode: 'json' }).$type<{
+      gistTitle?: string;
+      commentText?: string;
+      [key: string]: any;
+    }>(),
+    read: integer('read', { mode: 'boolean' }).notNull().default(false),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => ({
+    // Compound index for efficient querying of user's unread notifications
+    userReadCreatedIdx: index('notifications_user_read_created_idx').on(
+      table.userId,
+      table.read,
+      table.createdAt
+    ),
+    // Index for finding notifications by user (for pagination)
+    userCreatedIdx: index('notifications_user_created_idx').on(
+      table.userId,
+      table.createdAt
+    ),
+    // Index for finding notifications by gist
+    gistIdx: index('notifications_gist_idx').on(table.gistId),
+    // Index for finding notifications by actor
+    actorIdx: index('notifications_actor_idx').on(table.actorId),
   })
 );
 
@@ -269,6 +359,28 @@ export type NewComment = typeof comments.$inferInsert;
 export type Star = typeof stars.$inferSelect;
 export type NewStar = typeof stars.$inferInsert;
 
+export type Subscription = typeof subscriptions.$inferSelect;
+export type NewSubscription = typeof subscriptions.$inferInsert;
+
+export type Notification = typeof notifications.$inferSelect;
+export type NewNotification = typeof notifications.$inferInsert;
+
+export type UserRelations = typeof usersRelations;
+export type UserPasswordRelations = typeof userPasswordsRelations;
+export type UserSessionRelations = typeof userSessionsRelations;
+export type PasswordResetTokenRelations = typeof passwordResetTokensRelations;
+export type GistRelations = typeof gistsRelations;
+export type FileRelations = typeof filesRelations;
+export type RevisionRelations = typeof revisionsRelations;
+export type RevisionFileRelations = typeof revisionFilesRelations;
+export type CommentRelations = typeof commentsRelations;
+export type StarRelations = typeof starsRelations;
+export type SubscriptionRelations = typeof subscriptionsRelations;
+export type NotificationRelations = typeof notificationsRelations;
+
+export type GistOwner = Gist & { owner: User }
+export type GistDetails = GistOwner & { files: File[]; commentCount: number; forkData?: GistOwner }
+export type NotificationWithActor = Notification & { actor: User; gist?: Gist }
 
 export const usersRelations = relations(users, ({ one, many }) => ({
   password: one(userPasswords, {
@@ -280,6 +392,10 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   gists: many(gists),
   comments: many(comments),
   stars: many(stars),
+  subscriptions: many(subscriptions, { relationName: 'subscriberSubscriptions' }),
+  subscribers: many(subscriptions, { relationName: 'userSubscribers' }),
+  notifications: many(notifications, { relationName: 'userNotifications' }),
+  triggeredNotifications: many(notifications, { relationName: 'actorNotifications' }),
 }));
 
 export const userPasswordsRelations = relations(userPasswords, ({ one }) => ({
@@ -312,6 +428,8 @@ export const gistsRelations = relations(gists, ({ one, many }) => ({
   revisions: many(revisions),
   comments: many(comments),
   stars: many(stars),
+  subscriptions: many(subscriptions),
+  notifications: many(notifications),
   sourceGist: one(gists, {
     fields: [gists.forkId],
     references: [gists.id],
@@ -346,7 +464,7 @@ export const revisionFilesRelations = relations(revisionFiles, ({ one }) => ({
   }),
 }));
 
-export const commentsRelations = relations(comments, ({ one }) => ({
+export const commentsRelations = relations(comments, ({ one, many }) => ({
   gist: one(gists, {
     fields: [comments.gistId],
     references: [gists.id],
@@ -355,6 +473,7 @@ export const commentsRelations = relations(comments, ({ one }) => ({
     fields: [comments.authorId],
     references: [users.id],
   }),
+  notifications: many(notifications),
 }));
 
 export const starsRelations = relations(stars, ({ one }) => ({
@@ -365,5 +484,43 @@ export const starsRelations = relations(stars, ({ one }) => ({
   gist: one(gists, {
     fields: [stars.gistId],
     references: [gists.id],
+  }),
+}));
+
+export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
+  subscriber: one(users, {
+    fields: [subscriptions.subscriberId],
+    references: [users.id],
+    relationName: 'subscriberSubscriptions',
+  }),
+  targetUser: one(users, {
+    fields: [subscriptions.targetUserId],
+    references: [users.id],
+    relationName: 'userSubscribers',
+  }),
+  targetGist: one(gists, {
+    fields: [subscriptions.targetGistId],
+    references: [gists.id],
+  }),
+}));
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
+    references: [users.id],
+    relationName: 'userNotifications',
+  }),
+  actor: one(users, {
+    fields: [notifications.actorId],
+    references: [users.id],
+    relationName: 'actorNotifications',
+  }),
+  gist: one(gists, {
+    fields: [notifications.gistId],
+    references: [gists.id],
+  }),
+  comment: one(comments, {
+    fields: [notifications.commentId],
+    references: [comments.id],
   }),
 }));

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import { GistUserCard } from '@/components/gist/gist-user-card';
+import { SubscribeToUserButton } from '@/components/gist/subscribe-to-user-button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -121,7 +122,10 @@ export default async function UserProfilePage({
             </Avatar>
 
             <div className="flex-1 text-center sm:text-left">
-              <h1 className="text-2xl md:text-3xl font-bold mb-2">{user.displayName}</h1>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2">
+                <h1 className="text-2xl md:text-3xl font-bold">{user.displayName}</h1>
+                <SubscribeToUserButton userId={user.id} userName={user.displayName} />
+              </div>
               <p className="text-lg md:text-xl text-muted-foreground mb-4">@{user.handle}</p>
 
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm text-muted-foreground">

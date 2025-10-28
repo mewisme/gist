@@ -4,7 +4,8 @@ import { generateId } from '@/lib/id-utils';
 
 import { db } from '../db';
 import type { Comment, User } from '../db/schema';
-import { comments, users } from '../db/schema';
+import { comments, gists, users } from '../db/schema';
+import { notificationService } from '../services/notification-service';
 
 export class CommentRepository {
   /**
@@ -28,6 +29,23 @@ export class CommentRepository {
         updatedAt: now,
       })
       .returning();
+
+    const [gistData] = await db
+      .select({ ownerId: gists.ownerId, title: gists.title })
+      .from(gists)
+      .where(eq(gists.id, data.gistId))
+      .limit(1);
+
+    if (gistData) {
+      notificationService.notifyGistCommented(
+        data.gistId,
+        gistData.ownerId,
+        data.authorId,
+        comment.id,
+        gistData.title || undefined,
+        data.text
+      ).catch(err => console.error('Failed to send comment notification:', err));
+    }
 
     return comment;
   }

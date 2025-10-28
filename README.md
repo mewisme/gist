@@ -8,7 +8,8 @@ A modern, full-featured code sharing platform built with Next.js 16, Drizzle ORM
 - 📝 **Multi-file Gists** - Create gists with multiple files and languages
 - 🎨 **Syntax Highlighting** - Beautiful code highlighting with Shiki
 - ⭐ **Social Features** - Star, fork, and comment on gists
-- 🔍 **Search & Discovery** - Find gists by content, tags, or users
+- 🔔 **Subscriptions & Notifications** - Subscribe to users or gists and get real-time notifications
+- 🔍 **FTS5 Full-Text Search** - Fast, indexed search with SQLite FTS5 extension
 - 📱 **Responsive Design** - Works perfectly on desktop and mobile
 - 🐳 **Docker Ready** - Easy deployment with Docker and docker-compose
 - 🌙 **Dark Mode** - Beautiful dark and light themes
@@ -68,8 +69,14 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 The SQLite database will be created automatically in the `./data/` directory. Generate and run migrations:
 
 ```bash
-pnpm run db:generate    # Generate migrations from schema
-pnpm run db:migrate     # Apply migrations to database
+pnpm run db:generate      # Generate migrations from schema (includes FTS5 automatically)
+pnpm run db:migrate       # Apply migrations to database
+```
+
+**If upgrading from an older version**, run the subscriptions/notifications migration:
+
+```bash
+npx tsx scripts/migrate-subscriptions-notifications.ts
 ```
 
 Seed the database with demo data:
@@ -106,7 +113,9 @@ The application uses SQLite with the following main tables:
 - **revision_files** - File snapshots for each revision
 - **comments** - Comments on gists
 - **stars** - User stars for gists
-- **forks** - Gist fork relationships
+- **subscriptions** - User and gist subscriptions
+- **notifications** - User notifications for subscribed activities
+- **gists_fts** - FTS5 virtual table for full-text search
 
 ## API Routes
 
@@ -130,6 +139,25 @@ The application uses SQLite with the following main tables:
 - `POST /api/comments` - Create a comment
 - `DELETE /api/comments/[commentId]` - Delete a comment
 
+### Subscriptions
+
+- `POST /api/subscriptions/users/[userId]` - Subscribe to a user
+- `DELETE /api/subscriptions/users/[userId]` - Unsubscribe from a user
+- `GET /api/subscriptions/users/[userId]` - Check user subscription status
+- `POST /api/subscriptions/gists/[gistId]` - Subscribe to a gist
+- `DELETE /api/subscriptions/gists/[gistId]` - Unsubscribe from a gist
+- `GET /api/subscriptions/gists/[gistId]` - Check gist subscription status
+- `GET /api/subscriptions/me` - Get subscription counts (following, followers, gists)
+
+### Notifications
+
+- `GET /api/notifications` - Get user notifications (supports pagination and filtering)
+- `PATCH /api/notifications` - Mark all notifications as read
+- `DELETE /api/notifications` - Delete all notifications
+- `GET /api/notifications/unread-count` - Get unread notification count
+- `PATCH /api/notifications/[notificationId]` - Mark notification as read
+- `DELETE /api/notifications/[notificationId]` - Delete notification
+
 ### User
 
 - `GET /api/user/settings` - Get user settings
@@ -147,6 +175,7 @@ The application uses SQLite with the following main tables:
 - `/g/[gistId]` - View gist with syntax highlighting
 - `/g/[gistId]/edit` - Edit gist (requires authentication)
 - `/u/[handle]` - User profile page with their gists
+- `/notifications` - View and manage notifications (requires authentication)
 - `/settings` - User settings (requires authentication)
 - `/signin` - Sign in page
 
@@ -258,6 +287,7 @@ src/
 │   │   │   │   ├── edit/         # Edit gist page
 │   │   │   │   └── revisions/    # Revision history
 │   │   │   └── new/              # Create new gist
+│   │   ├── notifications/        # Notifications page
 │   │   ├── settings/             # User settings
 │   │   ├── signin/               # Sign in page
 │   │   ├── signup/               # Sign up page
@@ -316,7 +346,11 @@ src/
 │   │   ├── gist-revision-page-client.tsx # Revision page
 │   │   ├── new-gist-page-client.tsx # New gist page
 │   │   ├── revision-history.tsx # Revision history
-│   │   └── star-button.tsx      # Star button
+│   │   ├── star-button.tsx      # Star button
+│   │   ├── subscribe-to-gist-button.tsx # Subscribe to gist
+│   │   └── subscribe-to-user-button.tsx # Subscribe to user
+│   ├── notifications/            # Notification components
+│   │   └── notification-button.tsx # Notification bell button
 │   ├── providers/                 # Context providers
 │   │   └── theme-provider.tsx   # Theme provider
 │   ├── screens/                  # Screen components
@@ -386,6 +420,14 @@ src/
 - HTTP-only cookies for session management
 - Input validation with Zod
 - SQL injection protection via Drizzle ORM
+
+## Documentation
+
+- [FTS5 Full-Text Search](docs/FTS5_SEARCH.md) - Full-text search implementation guide
+- [Docker Deployment](DOCKER.md) - Docker deployment instructions
+- [OG Cards](docs/OG_CARDS.md) - Open Graph card generation
+- [Subscriptions & Notifications](docs/SUBSCRIPTIONS_NOTIFICATIONS.md) - Subscription and notification system
+- [Notification UI](docs/NOTIFICATION_UI_FEATURE.md) - Notification bell icon and page
 
 ## Contributing
 

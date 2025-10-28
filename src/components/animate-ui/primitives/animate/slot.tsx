@@ -1,8 +1,7 @@
 'use client';
 
-import { type HTMLMotionProps,isMotionComponent, motion } from 'motion/react';
 import * as React from 'react';
-
+import { motion, isMotionComponent, type HTMLMotionProps } from 'motion/react';
 import { cn } from '@/lib/utils';
 
 type AnyProps = Record<string, unknown>;
@@ -17,7 +16,6 @@ type WithAsChild<Base extends object> =
   | (Base & { asChild?: false | undefined });
 
 type SlotProps<T extends HTMLElement = HTMLElement> = {
-   
   children?: any;
 } & DOMMotionProps<T>;
 
@@ -89,9 +87,9 @@ function Slot<T extends HTMLElement = HTMLElement>({
 }
 
 export {
-  type AnyProps,
-  type DOMMotionProps,
   Slot,
   type SlotProps,
   type WithAsChild,
+  type DOMMotionProps,
+  type AnyProps,
 };

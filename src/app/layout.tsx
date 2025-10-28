@@ -6,8 +6,7 @@ import { ThemeProvider } from "next-themes";
 import { Toaster } from "react-hot-toast";
 
 import { AuthProvider } from "@/components/auth/auth-context";
-import { Footer } from "@/components/common/footer";
-import { Navigation } from "@/components/common/navigation";
+import { CommandPalette } from "@/components/globals/command-palette";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -42,6 +41,8 @@ export default function RootLayout({
         >
           <AuthProvider>
             {children}
+            <CommandPalette />
+            <Toaster position="top-right" />
           </AuthProvider>
         </ThemeProvider>
       </body>

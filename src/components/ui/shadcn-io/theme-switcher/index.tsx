@@ -53,7 +53,6 @@ export const ThemeSwitcher = ({
     [setThemeNext]
   );
 
-  // Prevent hydration mismatch
   useEffect(() => {
      
     setMounted(true);

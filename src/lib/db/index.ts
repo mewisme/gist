@@ -20,6 +20,6 @@ try {
   db = drizzle(sqlite, { schema });
 }
 
-export { db };
+export { db, sqlite };
 
 export * from './schema';

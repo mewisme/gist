@@ -1,0 +1,114 @@
+'use client';
+
+import { Bell, BellOff } from 'lucide-react';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
+
+import { useAuth } from '@/components/auth/auth-context';
+import { Button } from '@/components/ui/button';
+
+interface SubscribeToGistButtonProps {
+  gistId: string;
+  gistTitle?: string;
+}
+
+export function SubscribeToGistButton({ gistId, gistTitle }: SubscribeToGistButtonProps) {
+  const { user } = useAuth();
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(true);
+
+  useEffect(() => {
+    const checkSubscriptionStatus = async () => {
+      if (!user) {
+        setIsCheckingStatus(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/subscriptions/gists/${gistId}`, {
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setIsSubscribed(data.data.subscribed);
+        }
+      } catch (error) {
+        console.error('Error checking subscription status:', error);
+      } finally {
+        setIsCheckingStatus(false);
+      }
+    };
+
+    checkSubscriptionStatus();
+  }, [gistId, user]);
+
+  const handleSubscribeToggle = async () => {
+    if (!user) return;
+
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(`/api/subscriptions/gists/${gistId}`, {
+        method: isSubscribed ? 'DELETE' : 'POST',
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        setIsSubscribed(!isSubscribed);
+        toast.success(
+          isSubscribed
+            ? 'Unsubscribed from gist notifications'
+            : 'Subscribed to gist notifications'
+        );
+      } else {
+        const data = await response.json();
+        toast.error(data.error || 'Failed to update subscription');
+      }
+    } catch (error) {
+      console.error('Error toggling subscription:', error);
+      toast.error('An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (!user) {
+    return (
+      <Button variant="outline" size="sm" asChild>
+        <Link href="/signin">
+          <Bell className="h-4 w-4 mr-2" />
+          Watch
+        </Link>
+      </Button>
+    );
+  }
+
+  if (isCheckingStatus) {
+    return (
+      <Button variant="outline" size="sm" disabled>
+        <Bell className="h-4 w-4 mr-2" />
+        Watch
+      </Button>
+    );
+  }
+
+  return (
+    <Button
+      variant={isSubscribed ? "secondary" : "outline"}
+      size="sm"
+      onClick={handleSubscribeToggle}
+      disabled={isLoading}
+    >
+      {isSubscribed ? (
+        <BellOff className="h-4 w-4 mr-2" />
+      ) : (
+        <Bell className="h-4 w-4 mr-2" />
+      )}
+      {isLoading ? '...' : isSubscribed ? 'Unwatch' : 'Watch'}
+    </Button>
+  );
+}
+

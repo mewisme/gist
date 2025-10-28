@@ -172,7 +172,7 @@ export function GistPageClient({ gistId }: GistPageClientProps) {
                 <span>
                   {gist.title || gist.description || 'Untitled Gist'}
                 </span>
-                <Badge variant={'outline'} className='text-sm md:text-md pb-1 my-1'>
+                <Badge variant={'outline'} className='text-sm md:text-md capitalize my-1'>
                   {gist.visibility}
                 </Badge>
               </h1>

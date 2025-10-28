@@ -1,7 +1,7 @@
 'use client';
 
-import { cva, type VariantProps } from 'class-variance-authority';
 import * as React from 'react';
+import { cva, type VariantProps } from 'class-variance-authority';
 
 import {
   Button as ButtonPrimitive,
@@ -54,4 +54,4 @@ function Button({ className, variant, size, ...props }: ButtonProps) {
   );
 }
 
-export { Button, type ButtonProps,buttonVariants };
+export { Button, buttonVariants, type ButtonProps };

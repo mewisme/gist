@@ -1,10 +1,11 @@
-import { and, asc, count, desc, eq, inArray, like, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, or, sql } from 'drizzle-orm';
 
 import { generateId } from '@/lib/id-utils';
 
-import { db } from '../db';
-import type { Comment, File, Gist, Revision, User } from '../db/schema';
-import { comments, files, gists, revisionFiles, revisions, stars, users } from '../db/schema';
+import { db, sqlite } from '../db';
+import type { File, Gist, GistDetails, GistOwner, Revision, RevisionFile, User } from '../db/schema';
+import { comments, files, gists, revisionFiles, revisions, users } from '../db/schema';
+import { notificationService } from '../services/notification-service';
 
 export class GistRepository {
   /**
@@ -25,7 +26,6 @@ export class GistRepository {
     const gistId = generateId();
     const now = new Date();
 
-    // Auto-generate title from first filename if not provided
     const title = data.title || data.files[0]?.filename || 'Untitled Gist';
 
     const [gist] = await db
@@ -56,13 +56,19 @@ export class GistRepository {
 
     db.insert(files).values(fileData).run();
 
+    notificationService.notifyGistCreated(
+      gistId,
+      data.ownerId,
+      title
+    ).catch(err => console.error('Failed to send gist created notification:', err));
+
     return gist;
   }
 
   /**
    * Get gist by ID with files, owner, and fork data
    */
-  async getGistById(id: string): Promise<(Gist & { files: File[]; owner: User; forkData?: Gist & { owner: User } }) | null> {
+  async getGistById(id: string): Promise<GistDetails | null> {
     const result = await db
       .select({
         gist: gists,
@@ -82,8 +88,13 @@ export class GistRepository {
       .filter(r => r.file)
       .map(r => r.file!);
 
-    // If this gist is a fork, fetch the parent gist data
-    let forkData: (Gist & { owner: User }) | undefined;
+    const [commentCountResult] = await db
+      .select({ count: count() })
+      .from(comments)
+      .where(eq(comments.gistId, id));
+    const commentCount = commentCountResult?.count || 0;
+
+    let forkData: GistOwner | undefined;
     if (gist.forkId) {
       const forkResult = await db
         .select({
@@ -100,7 +111,7 @@ export class GistRepository {
       }
     }
 
-    return { ...gist, files: gistFiles, owner, forkData };
+    return { ...gist, files: gistFiles, owner, commentCount, forkData };
   }
 
   /**
@@ -110,7 +121,7 @@ export class GistRepository {
     limit = 20,
     offset = 0,
     sortBy: 'recently-created' | 'recently-updated' | 'least-recently-created' | 'least-recently-updated' = 'recently-created'
-  ): Promise<(Gist & { owner: User; files: File[]; commentCount: number; forkData?: Gist & { owner: User } })[]> {
+  ): Promise<GistDetails[]> {
     let orderBy;
     switch (sortBy) {
       case 'recently-created':
@@ -158,7 +169,6 @@ export class GistRepository {
       filesByGist.get(file.gistId)!.push(file);
     });
 
-    // Fetch fork data for gists that are forks
     const forkIds = gistResults.filter(r => r.gist.forkId).map(r => r.gist.forkId!);
     const forkDataMap = new Map<string, Gist & { owner: User }>();
 
@@ -194,7 +204,7 @@ export class GistRepository {
     limit = 20,
     offset = 0,
     sortBy: 'recently-created' | 'recently-updated' | 'least-recently-created' | 'least-recently-updated' = 'recently-created'
-  ): Promise<{ gists: (Gist & { owner: User; files: File[]; commentCount: number; forkData?: Gist & { owner: User } })[], total: number }> {
+  ): Promise<{ gists: GistDetails[], total: number }> {
     let orderBy;
     switch (sortBy) {
       case 'recently-created':
@@ -213,7 +223,6 @@ export class GistRepository {
         orderBy = desc(gists.createdAt);
     }
 
-    // Get total count
     const [totalResult] = await db
       .select({ count: count() })
       .from(gists)
@@ -250,9 +259,8 @@ export class GistRepository {
       filesByGist.get(file.gistId)!.push(file);
     });
 
-    // Fetch fork data for gists that are forks
     const forkIds = gistResults.filter(r => r.gist.forkId).map(r => r.gist.forkId!);
-    const forkDataMap = new Map<string, Gist & { owner: User }>();
+    const forkDataMap = new Map<string, GistOwner>();
 
     if (forkIds.length > 0) {
       const forkResults = await db
@@ -289,7 +297,7 @@ export class GistRepository {
     description?: string;
     visibility?: 'public' | 'secret';
     tags?: string[];
-  }): Promise<Gist | null> {
+  }, updaterId?: string): Promise<Gist | null> {
     await this.createRevisionFromCurrentState(id);
 
     const [gist] = await db
@@ -300,6 +308,15 @@ export class GistRepository {
       })
       .where(eq(gists.id, id))
       .returning();
+
+    if (gist && updaterId) {
+      notificationService.notifyGistUpdated(
+        id,
+        gist.ownerId,
+        updaterId,
+        gist.title || undefined
+      ).catch(err => console.error('Failed to send gist updated notification:', err));
+    }
 
     return gist || null;
   }
@@ -323,7 +340,7 @@ export class GistRepository {
     filename: string;
     language: string;
     content: string;
-  }): Promise<File> {
+  }, updaterId?: string): Promise<File> {
     await this.createRevisionFromCurrentState(gistId);
 
     const now = new Date();
@@ -341,7 +358,6 @@ export class GistRepository {
       })
       .returning();
 
-    // Update file count and potentially update title if this is the first file
     await db
       .update(gists)
       .set({
@@ -350,7 +366,6 @@ export class GistRepository {
       })
       .where(eq(gists.id, gistId));
 
-    // Update title if this is the first file or if current title is empty
     const currentGist = await db.select().from(gists).where(eq(gists.id, gistId)).limit(1);
     if (currentGist.length > 0 && (!currentGist[0].title || currentGist[0].title === 'Untitled Gist')) {
       await db
@@ -360,6 +375,15 @@ export class GistRepository {
           updatedAt: now,
         })
         .where(eq(gists.id, gistId));
+    }
+
+    if (currentGist.length > 0 && updaterId) {
+      notificationService.notifyGistUpdated(
+        gistId,
+        currentGist[0].ownerId,
+        updaterId,
+        currentGist[0].title || file.filename
+      ).catch(err => console.error('Failed to send gist updated notification:', err));
     }
 
     return newFile;
@@ -372,7 +396,7 @@ export class GistRepository {
     filename?: string;
     language?: string;
     content?: string;
-  }): Promise<File | null> {
+  }, updaterId?: string): Promise<File | null> {
     const fileResult = await db
       .select({ gistId: files.gistId })
       .from(files)
@@ -400,7 +424,8 @@ export class GistRepository {
       .where(eq(files.id, fileId))
       .returning();
 
-    // Update gist title if this is the first file and filename changed
+    const currentGist = await db.select().from(gists).where(eq(gists.id, fileResult[0].gistId)).limit(1);
+
     if (data.filename) {
       const gistFiles = await db
         .select()
@@ -417,6 +442,15 @@ export class GistRepository {
           })
           .where(eq(gists.id, fileResult[0].gistId));
       }
+    }
+
+    if (currentGist.length > 0 && updaterId) {
+      notificationService.notifyGistUpdated(
+        fileResult[0].gistId,
+        currentGist[0].ownerId,
+        updaterId,
+        currentGist[0].title || undefined
+      ).catch(err => console.error('Failed to send gist updated notification:', err));
     }
 
     return file || null;
@@ -451,7 +485,6 @@ export class GistRepository {
         })
         .where(eq(gists.id, file[0].gistId));
 
-      // Update title if this was the first file
       const remainingFiles = await db
         .select()
         .from(files)
@@ -467,7 +500,6 @@ export class GistRepository {
           })
           .where(eq(gists.id, file[0].gistId));
       } else {
-        // No files left, set title to default
         await db
           .update(gists)
           .set({
@@ -548,7 +580,7 @@ export class GistRepository {
   /**
    * Get revision with files
    */
-  async getRevisionWithFiles(revisionId: string): Promise<(Revision & { files: any[] }) | null> {
+  async getRevisionWithFiles(revisionId: string): Promise<(Revision & { files: RevisionFile[] }) | null> {
     const revision = await db
       .select()
       .from(revisions)
@@ -566,10 +598,47 @@ export class GistRepository {
   }
 
   /**
-   * Search gists
+   * Search gists using FTS5 full-text search
    */
-  async searchGists(query: string, limit = 20, offset = 0): Promise<(Gist & { owner: User; files: File[]; commentCount: number; forkData?: Gist & { owner: User } })[]> {
-    const searchTerm = `%${query}%`;
+  async searchGists(query: string, limit = 20, offset = 0, userId?: string): Promise<GistDetails[]> {
+    const ftsQuery = query
+      .replace(/['"*]/g, ' ')  // Remove FTS5 special characters
+      .trim()
+      .split(/\s+/)
+      .filter(term => term.length > 0)
+      .map(term => `"${term}"*`)  // Prefix match for each term
+      .join(' OR ');
+
+    if (!ftsQuery) {
+      return [];
+    }
+
+    const ftsResults = sqlite.prepare(`
+      SELECT 
+        gist_id,
+        rank
+      FROM gists_fts
+      WHERE gists_fts MATCH ?
+      ORDER BY rank
+      LIMIT ?
+      OFFSET ?
+    `).all(ftsQuery, limit * 2, offset) as Array<{ gist_id: string; rank: number }>;
+
+    if (ftsResults.length === 0) {
+      return [];
+    }
+
+    const matchedGistIds = ftsResults.map(r => r.gist_id);
+
+    const visibilityCondition = userId
+      ? or(
+        eq(gists.visibility, 'public'),
+        and(
+          eq(gists.visibility, 'secret'),
+          eq(gists.ownerId, userId)
+        )
+      )
+      : eq(gists.visibility, 'public');
 
     const gistResults = await db
       .select({
@@ -582,18 +651,20 @@ export class GistRepository {
       .leftJoin(comments, eq(comments.gistId, gists.id))
       .where(
         and(
-          eq(gists.visibility, 'public'),
-          or(
-            like(gists.description, searchTerm),
-            like(users.handle, searchTerm),
-            like(users.displayName, searchTerm)
-          )
+          inArray(gists.id, matchedGistIds),
+          visibilityCondition
         )
       )
       .groupBy(gists.id, users.id)
-      .orderBy(desc(gists.createdAt))
-      .limit(limit)
-      .offset(offset);
+      .limit(limit);
+
+    const rankMap = new Map(ftsResults.map(r => [r.gist_id, r.rank]));
+
+    gistResults.sort((a, b) => {
+      const rankA = rankMap.get(a.gist.id) || 0;
+      const rankB = rankMap.get(b.gist.id) || 0;
+      return rankA - rankB; // Lower rank is better in FTS5
+    });
 
     const gistIds = gistResults.map(r => r.gist.id);
     const fileResults = gistIds.length > 0 ? await db
@@ -609,9 +680,8 @@ export class GistRepository {
       filesByGist.get(file.gistId)!.push(file);
     });
 
-    // Fetch fork data for gists that are forks
     const forkIds = gistResults.filter(r => r.gist.forkId).map(r => r.gist.forkId!);
-    const forkDataMap = new Map<string, Gist & { owner: User }>();
+    const forkDataMap = new Map<string, GistOwner>();
 
     if (forkIds.length > 0) {
       const forkResults = await db
@@ -640,7 +710,7 @@ export class GistRepository {
   /**
    * Get gist by file ID (for ownership checks)
    */
-  async getGistByFileId(fileId: string): Promise<(Gist & { owner: User }) | null> {
+  async getGistByFileId(fileId: string): Promise<GistOwner | null> {
     const result = await db
       .select({
         gist: gists,
@@ -690,6 +760,14 @@ export class GistRepository {
         forkId: sourceGistId,
       })
       .where(eq(gists.id, newGist.id));
+
+    notificationService.notifyGistForked(
+      sourceGistId,
+      sourceGist.ownerId,
+      newOwnerId,
+      newGist.id,
+      sourceGist.title || undefined
+    ).catch(err => console.error('Failed to send gist forked notification:', err));
 
     return newGist;
   }

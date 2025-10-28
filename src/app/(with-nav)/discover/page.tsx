@@ -1,11 +1,11 @@
-import { Code, Plus, Share, Star } from 'lucide-react';
+import { Code } from 'lucide-react';
 import { Metadata } from 'next';
 import Link from 'next/link';
 
 import { SortDropdown } from '@/components/discover/sort-dropdown';
-import { GistCard } from '@/components/gist/gist-card';
 import { GistDiscoverCard } from '@/components/gist/gist-discover-card';
 import { Button } from '@/components/ui/button';
+import { getCurrentUser } from '@/lib/auth';
 import { generateMetadata as genMetadata } from '@/lib/metadata-utils';
 import { GistRepository } from '@/lib/repositories/gist-repository';
 
@@ -42,6 +42,7 @@ export default async function DiscoverPage({
   searchParams: Promise<{ search?: string; sort?: string }>;
 }) {
   const params = await searchParams;
+  const user = await getCurrentUser();
   let gists;
 
   const validSortOptions = ['recently-created', 'recently-updated', 'least-recently-created', 'least-recently-updated'];
@@ -50,7 +51,7 @@ export default async function DiscoverPage({
     : 'recently-created';
 
   if (params.search) {
-    gists = await gistRepository.searchGists(params.search, 20, 0);
+    gists = await gistRepository.searchGists(params.search, 20, 0, user?.id);
   } else {
     gists = await gistRepository.getPublicGists(20, 0, sortBy);
   }

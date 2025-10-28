@@ -6,6 +6,16 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 
 import { updateGistWithFiles } from '@/app/actions/gist-actions';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/animate-ui/components/radix/alert-dialog';
 import { useAuth } from '@/components/auth/auth-context';
 import { CodeEditor } from '@/components/editor/code-editor';
 import { Button } from '@/components/ui/button';
@@ -15,6 +25,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TagsInput } from '@/components/ui/tags-input';
+import { useHotkeys } from '@/hooks/use-hot-keys';
 
 interface FileData {
   id: string;
@@ -32,6 +43,7 @@ export function EditGistPageClient({ gistId }: EditGistPageClientProps) {
   const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPublicConfirm, setShowPublicConfirm] = useState(false);
 
   const [formData, setFormData] = useState({
     description: '',
@@ -102,6 +114,35 @@ export function EditGistPageClient({ gistId }: EditGistPageClientProps) {
     }
   }, [user, authLoading, router]);
 
+  const validateAndSubmit = () => {
+    if (!user) {
+      toast.error('Please sign in to edit a gist');
+      return;
+    }
+
+    if (formData.files.length === 0) {
+      toast.error('Please add at least one file');
+      return;
+    }
+
+    if (formData.files.some(file => !file.filename.trim() || !file.content.trim())) {
+      toast.error('All files must have a filename and content');
+      return;
+    }
+
+    if (formData.visibility === 'public') {
+      setShowPublicConfirm(true);
+      return;
+    }
+
+    performSave();
+  };
+
+  useHotkeys(['ctrl+s', 'meta+s'], (e) => {
+    e.preventDefault();
+    validateAndSubmit();
+  });
+
   const updateFormData = (data: Partial<typeof formData>) => {
     setFormData(prev => ({ ...prev, ...data }));
   };
@@ -135,21 +176,9 @@ export function EditGistPageClient({ gistId }: EditGistPageClientProps) {
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const performSave = async () => {
     if (!user) {
       toast.error('Please sign in to edit a gist');
-      return;
-    }
-
-    if (formData.files.length === 0) {
-      toast.error('Please add at least one file');
-      return;
-    }
-
-    if (formData.files.some(file => !file.filename.trim() || !file.content.trim())) {
-      toast.error('All files must have a filename and content');
       return;
     }
 
@@ -180,6 +209,11 @@ export function EditGistPageClient({ gistId }: EditGistPageClientProps) {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    validateAndSubmit();
   };
 
 
@@ -311,6 +345,29 @@ export function EditGistPageClient({ gistId }: EditGistPageClientProps) {
           </ButtonGroup>
         </div>
       </form>
+
+      <AlertDialog open={showPublicConfirm} onOpenChange={setShowPublicConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Make gist public?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This gist will be visible to everyone, including search engines. Anyone can view, fork, and share it. Are you sure you want to continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                setShowPublicConfirm(false);
+                await performSave();
+              }}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Updating...' : 'Yes, make it public'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

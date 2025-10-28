@@ -2,12 +2,22 @@ import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '../db';
 import { gists, stars } from '../db/schema';
+import { notificationService } from '../services/notification-service';
 
 export class StarRepository {
   /**
    * Toggle star for a gist
    */
   async toggleStar(gistId: string, userId: string): Promise<{ starred: boolean; starCount: number }> {
+    const [gistData] = await db
+      .select({ ownerId: gists.ownerId, title: gists.title })
+      .from(gists)
+      .where(eq(gists.id, gistId))
+      .limit(1);
+
+    if (!gistData) {
+      throw new Error('Gist not found');
+    }
     const existingStar = await db
       .select()
       .from(stars)
@@ -43,6 +53,13 @@ export class StarRepository {
         .where(eq(gists.id, gistId))
         .limit(1);
 
+      notificationService.notifyGistUnstarred(
+        gistId,
+        gistData.ownerId,
+        userId,
+        gistData.title || undefined
+      ).catch(err => console.error('Failed to send unstar notification:', err));
+
       return { starred: false, starCount: gist.starCount };
     } else {
       db
@@ -65,6 +82,13 @@ export class StarRepository {
         .from(gists)
         .where(eq(gists.id, gistId))
         .limit(1);
+
+      notificationService.notifyGistStarred(
+        gistId,
+        gistData.ownerId,
+        userId,
+        gistData.title || undefined
+      ).catch(err => console.error('Failed to send star notification:', err));
 
       return { starred: true, starCount: gist.starCount };
     }
