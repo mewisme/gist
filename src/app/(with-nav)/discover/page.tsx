@@ -6,6 +6,7 @@ import { SortDropdown } from '@/components/discover/sort-dropdown';
 import { GistCard } from '@/components/gist/gist-card';
 import { GistDiscoverCard } from '@/components/gist/gist-discover-card';
 import { Button } from '@/components/ui/button';
+import { generateMetadata as genMetadata } from '@/lib/metadata-utils';
 import { GistRepository } from '@/lib/repositories/gist-repository';
 
 const gistRepository = new GistRepository();
@@ -20,33 +21,19 @@ export async function generateMetadata({
   const params = await searchParams;
 
   if (params.search) {
-    return {
-      title: `Search Results for "${params.search}" - Gist`,
+    return genMetadata({
+      title: `Search Results for "${params.search}"`,
       description: `Search results for "${params.search}" on Gist. Find and discover code snippets, gists, and programming examples.`,
-      openGraph: {
-        title: `Search Results for "${params.search}"`,
-        description: `Find code snippets and gists related to "${params.search}"`,
-        type: 'website',
-      },
-    };
+      ogImagePath: '/api/og',
+    });
   }
 
-  return {
-    title: 'Discover Gists - Gist',
+  return genMetadata({
+    title: 'Discover Gists',
     description: 'Discover and explore code snippets, gists, and programming examples shared by the community.',
     keywords: ['code snippets', 'gist', 'programming', 'syntax highlighting', 'code sharing', 'discover'],
-    openGraph: {
-      title: 'Discover Gists - Gist',
-      description: 'Discover and explore code snippets, gists, and programming examples shared by the community.',
-      type: 'website',
-      siteName: 'Gist',
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: 'Discover Gists - Gist',
-      description: 'Discover and explore code snippets, gists, and programming examples shared by the community.',
-    },
-  };
+    ogImagePath: '/api/og',
+  });
 }
 
 export default async function DiscoverPage({

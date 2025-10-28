@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 
 import { EditGistPageClient } from '@/components/gist/edit-gist-page-client';
+import { generateMetadata as genMetadata } from '@/lib/metadata-utils';
 
 export async function generateMetadata({
   params,
@@ -15,9 +16,11 @@ export async function generateMetadata({
     });
 
     if (!response.ok) {
-      return {
-        title: 'Edit Gist - Gist',
-      };
+      return genMetadata({
+        title: 'Edit Gist',
+        description: 'Edit your code snippet',
+        ogImagePath: '/api/og',
+      });
     }
 
     const data = await response.json();
@@ -25,14 +28,17 @@ export async function generateMetadata({
 
     const title = gist.title || gist.files?.at(0)?.filename || gist.description || 'Untitled Gist';
 
-    return {
-      title: `Edit ${title} - Gist`,
+    return genMetadata({
+      title: `Edit ${title}`,
       description: `Edit your gist: ${gist.description || 'Update your code snippets'}`,
-    };
+      ogImagePath: `/api/og/gist/${resolvedParams.gistId}`,
+    });
   } catch (error) {
-    return {
-      title: 'Edit Gist - Gist',
-    };
+    return genMetadata({
+      title: 'Edit Gist',
+      description: 'Edit your code snippet',
+      ogImagePath: '/api/og',
+    });
   }
 }
 

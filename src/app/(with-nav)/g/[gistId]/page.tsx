@@ -1,4 +1,5 @@
 import { GistPageClient } from '@/components/gist/gist-page-client';
+import { generateMetadata as genMetadata } from '@/lib/metadata-utils';
 
 export async function generateMetadata({
   params,
@@ -13,9 +14,11 @@ export async function generateMetadata({
     });
 
     if (!response.ok) {
-      return {
+      return genMetadata({
         title: 'Gist Not Found',
-      };
+        description: 'The requested gist could not be found.',
+        ogImagePath: '/api/og',
+      });
     }
 
     const data = await response.json();
@@ -24,20 +27,19 @@ export async function generateMetadata({
     const title = gist.title || gist.files?.at(0)?.filename || gist.description || 'Untitled Gist';
     const description = gist.description || `A ${gist.visibility} gist by ${gist.owner.displayName}`;
 
-    return {
-      title: `${title} - Gist`,
-      description: description,
-      openGraph: {
-        title: title,
-        description: description,
-        type: 'article',
-        authors: [gist.owner.displayName],
-      },
-    };
+    return genMetadata({
+      title,
+      description,
+      type: 'article',
+      authors: [gist.owner.displayName],
+      ogImagePath: `/api/og/gist/${resolvedParams.gistId}`,
+    });
   } catch (error) {
-    return {
+    return genMetadata({
       title: 'Gist Not Found',
-    };
+      description: 'The requested gist could not be found.',
+      ogImagePath: '/api/og',
+    });
   }
 }
 

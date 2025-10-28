@@ -80,7 +80,7 @@ export function EmbedGistClient({ gistId }: EmbedGistClientProps) {
                 </div>
               }
             >
-              <EmbedCodeBlock gistId={gistId} file={file} resolvedTheme={resolvedTheme} />
+              <EmbedCodeBlock gistId={gistId} file={file} />
             </Suspense>
           ))}
         </div>
@@ -89,7 +89,7 @@ export function EmbedGistClient({ gistId }: EmbedGistClientProps) {
   );
 }
 
-function EmbedCodeBlock({ gistId, file, resolvedTheme }: { gistId: string, file: any, resolvedTheme: string | undefined }) {
+function EmbedCodeBlock({ gistId, file }: { gistId: string, file: any }) {
   return (
     <div className="w-full">
       <Suspense

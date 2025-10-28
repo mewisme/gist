@@ -10,11 +10,51 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { UserSortDropdown } from '@/components/user/user-sort-dropdown';
 import { db, users } from '@/lib/db';
+import { generateMetadata as genMetadata } from '@/lib/metadata-utils';
 import { GistRepository } from '@/lib/repositories/gist-repository';
 
 const gistRepository = new GistRepository();
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ handle: string }>;
+}) {
+  try {
+    const { handle } = await params;
+
+    const userResult = await db
+      .select()
+      .from(users)
+      .where(eq(users.handle, handle))
+      .limit(1);
+
+    if (userResult.length === 0) {
+      return genMetadata({
+        title: 'User Not Found',
+        description: 'The requested user could not be found.',
+        ogImagePath: '/api/og',
+      });
+    }
+
+    const user = userResult[0];
+    const result = await gistRepository.getGistsByUser(user.id, 1, 0, 'recently-created');
+
+    return genMetadata({
+      title: user.displayName,
+      description: `@${user.handle} • ${result.total} gist${result.total !== 1 ? 's' : ''}`,
+      ogImagePath: `/api/og/user/${handle}`,
+    });
+  } catch (error) {
+    return genMetadata({
+      title: 'User Not Found',
+      description: 'The requested user could not be found.',
+      ogImagePath: '/api/og',
+    });
+  }
+}
 
 export default async function UserProfilePage({
   params,

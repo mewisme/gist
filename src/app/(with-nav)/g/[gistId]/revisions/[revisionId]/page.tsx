@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 
 import { GistRevisionPageClient } from '@/components/gist/gist-revision-page-client';
+import { generateMetadata as genMetadata } from '@/lib/metadata-utils';
 
 export async function generateMetadata({
   params,
@@ -15,9 +16,11 @@ export async function generateMetadata({
     });
 
     if (!response.ok) {
-      return {
-        title: 'Gist Revision - Gist',
-      };
+      return genMetadata({
+        title: 'Gist Revision',
+        description: 'View historical revision',
+        ogImagePath: '/api/og',
+      });
     }
 
     const data = await response.json();
@@ -25,14 +28,17 @@ export async function generateMetadata({
 
     const title = revision.snapshotMeta.description || 'Untitled Gist';
 
-    return {
-      title: `Revision: ${title} - Gist`,
+    return genMetadata({
+      title: `Revision: ${title}`,
       description: `Historical revision of ${title}`,
-    };
+      ogImagePath: `/api/og/gist/${resolvedParams.gistId}`,
+    });
   } catch (error) {
-    return {
-      title: 'Gist Revision - Gist',
-    };
+    return genMetadata({
+      title: 'Gist Revision',
+      description: 'View historical revision',
+      ogImagePath: '/api/og',
+    });
   }
 }
 

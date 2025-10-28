@@ -22,6 +22,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Gist - Share Code Snippets",
   description: "A Gist-like platform for sharing code snippets with syntax highlighting, versioning, and collaboration features.",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'),
 };
 
 export default function RootLayout({
