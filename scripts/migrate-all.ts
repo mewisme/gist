@@ -91,7 +91,7 @@ try {
       // Create subscriptions table
       if (!checkSubscriptions) {
         db.exec(`
-          CREATE TABLE subscriptions (
+          CREATE TABLE IF NOT EXISTS subscriptions (
             id TEXT PRIMARY KEY NOT NULL,
             subscriber_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
             target_user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
@@ -100,11 +100,11 @@ try {
           );
         `);
         db.exec(`
-          CREATE UNIQUE INDEX subscriptions_subscriber_user_idx ON subscriptions(subscriber_id, target_user_id);
-          CREATE UNIQUE INDEX subscriptions_subscriber_gist_idx ON subscriptions(subscriber_id, target_gist_id);
-          CREATE INDEX subscriptions_target_user_idx ON subscriptions(target_user_id);
-          CREATE INDEX subscriptions_target_gist_idx ON subscriptions(target_gist_id);
-          CREATE INDEX subscriptions_subscriber_idx ON subscriptions(subscriber_id);
+          CREATE UNIQUE INDEX IF NOT EXISTS subscriptions_subscriber_user_idx ON subscriptions(subscriber_id, target_user_id);
+          CREATE UNIQUE INDEX IF NOT EXISTS subscriptions_subscriber_gist_idx ON subscriptions(subscriber_id, target_gist_id);
+          CREATE INDEX IF NOT EXISTS subscriptions_target_user_idx ON subscriptions(target_user_id);
+          CREATE INDEX IF NOT EXISTS subscriptions_target_gist_idx ON subscriptions(target_gist_id);
+          CREATE INDEX IF NOT EXISTS subscriptions_subscriber_idx ON subscriptions(subscriber_id);
         `);
         console.log('      [✓] Created subscriptions table');
       }
@@ -112,7 +112,7 @@ try {
       // Create notifications table
       if (!checkNotifications) {
         db.exec(`
-          CREATE TABLE notifications (
+          CREATE TABLE IF NOT EXISTS notifications (
             id TEXT PRIMARY KEY NOT NULL,
             user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
             type TEXT NOT NULL CHECK(type IN ('gist_created', 'gist_updated', 'gist_starred', 'gist_unstarred', 'gist_commented', 'gist_forked', 'user_followed')),
@@ -125,10 +125,10 @@ try {
           );
         `);
         db.exec(`
-          CREATE INDEX notifications_user_read_created_idx ON notifications(user_id, read, created_at);
-          CREATE INDEX notifications_user_created_idx ON notifications(user_id, created_at);
-          CREATE INDEX notifications_gist_idx ON notifications(gist_id);
-          CREATE INDEX notifications_actor_idx ON notifications(actor_id);
+          CREATE INDEX IF NOT EXISTS notifications_user_read_created_idx ON notifications(user_id, read, created_at);
+          CREATE INDEX IF NOT EXISTS notifications_user_created_idx ON notifications(user_id, created_at);
+          CREATE INDEX IF NOT EXISTS notifications_gist_idx ON notifications(gist_id);
+          CREATE INDEX IF NOT EXISTS notifications_actor_idx ON notifications(actor_id);
         `);
         console.log('      [✓] Created notifications table');
       }
@@ -163,7 +163,7 @@ try {
       db.exec('BEGIN TRANSACTION');
       try {
         db.exec(`
-          CREATE TABLE notifications_new (
+          CREATE TABLE IF NOT EXISTS notifications_new (
             id TEXT PRIMARY KEY,
             user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
             type TEXT NOT NULL CHECK(type IN ('gist_created', 'gist_updated', 'gist_starred', 'gist_unstarred', 'gist_commented', 'gist_forked', 'user_followed')),
@@ -186,10 +186,10 @@ try {
         db.exec('ALTER TABLE notifications_new RENAME TO notifications');
 
         db.exec(`
-          CREATE INDEX notifications_user_read_created_idx ON notifications(user_id, read, created_at);
-          CREATE INDEX notifications_user_created_idx ON notifications(user_id, created_at);
-          CREATE INDEX notifications_gist_idx ON notifications(gist_id);
-          CREATE INDEX notifications_actor_idx ON notifications(actor_id);
+          CREATE INDEX IF NOT EXISTS notifications_user_read_created_idx ON notifications(user_id, read, created_at);
+          CREATE INDEX IF NOT EXISTS notifications_user_created_idx ON notifications(user_id, created_at);
+          CREATE INDEX IF NOT EXISTS notifications_gist_idx ON notifications(gist_id);
+          CREATE INDEX IF NOT EXISTS notifications_actor_idx ON notifications(actor_id);
         `);
 
         db.exec('COMMIT');

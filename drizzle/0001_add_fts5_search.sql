@@ -1,5 +1,5 @@
 -- Create FTS5 virtual table for full-text search on gists
-CREATE VIRTUAL TABLE gists_fts USING fts5(
+CREATE VIRTUAL TABLE IF NOT EXISTS gists_fts USING fts5(
   gist_id UNINDEXED,
   title,
   description,
@@ -26,6 +26,9 @@ FROM gists g
 LEFT JOIN users u ON g.owner_id = u.id;
 --> statement-breakpoint
 
+-- Drop existing trigger to avoid duplicates
+DROP TRIGGER IF EXISTS gists_fts_insert;
+--> statement-breakpoint
 -- Trigger: Insert new gist into FTS5 table
 CREATE TRIGGER gists_fts_insert AFTER INSERT ON gists
 BEGIN
@@ -42,6 +45,9 @@ BEGIN
 END;
 --> statement-breakpoint
 
+-- Drop existing trigger to avoid duplicates
+DROP TRIGGER IF EXISTS gists_fts_update;
+--> statement-breakpoint
 -- Trigger: Update gist in FTS5 table
 CREATE TRIGGER gists_fts_update AFTER UPDATE ON gists
 BEGIN
@@ -55,6 +61,9 @@ BEGIN
 END;
 --> statement-breakpoint
 
+-- Drop existing trigger to avoid duplicates
+DROP TRIGGER IF EXISTS gists_fts_delete;
+--> statement-breakpoint
 -- Trigger: Delete gist from FTS5 table
 CREATE TRIGGER gists_fts_delete AFTER DELETE ON gists
 BEGIN
@@ -62,6 +71,9 @@ BEGIN
 END;
 --> statement-breakpoint
 
+-- Drop existing trigger to avoid duplicates
+DROP TRIGGER IF EXISTS users_fts_update;
+--> statement-breakpoint
 -- Trigger: Update FTS5 when user handle changes
 CREATE TRIGGER users_fts_update AFTER UPDATE ON users
 BEGIN
@@ -73,6 +85,9 @@ BEGIN
 END;
 --> statement-breakpoint
 
+-- Drop existing trigger to avoid duplicates
+DROP TRIGGER IF EXISTS files_fts_insert;
+--> statement-breakpoint
 -- Trigger: Insert file content into FTS5
 CREATE TRIGGER files_fts_insert AFTER INSERT ON files
 BEGIN
@@ -85,6 +100,9 @@ BEGIN
 END;
 --> statement-breakpoint
 
+-- Drop existing trigger to avoid duplicates
+DROP TRIGGER IF EXISTS files_fts_update;
+--> statement-breakpoint
 -- Trigger: Update file content in FTS5
 CREATE TRIGGER files_fts_update AFTER UPDATE ON files
 BEGIN
@@ -97,6 +115,9 @@ BEGIN
 END;
 --> statement-breakpoint
 
+-- Drop existing trigger to avoid duplicates
+DROP TRIGGER IF EXISTS files_fts_delete;
+--> statement-breakpoint
 -- Trigger: Delete file content from FTS5
 CREATE TRIGGER files_fts_delete AFTER DELETE ON files
 BEGIN

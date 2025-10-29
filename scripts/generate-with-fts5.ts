@@ -6,9 +6,119 @@ import { join } from 'path';
  * Custom migration generator that includes FTS5 setup
  * This script:
  * 1. Runs drizzle-kit generate
- * 2. Checks if FTS5 setup exists in migrations
- * 3. If not, appends FTS5 setup to the latest migration
+ * 2. Adds IF NOT EXISTS to all CREATE statements in generated SQL files
+ * 3. Checks if FTS5 setup exists in migrations
+ * 4. If not, appends FTS5 setup to the latest migration
  */
+
+/**
+ * Adds IF NOT EXISTS to all CREATE statements in SQL content
+ */
+function addIfNotExistsToSql(sqlContent: string): string {
+  let processed = sqlContent;
+
+  // Skip if already processed (contains IF NOT EXISTS)
+  if (processed.includes('CREATE TABLE IF NOT EXISTS') ||
+    processed.includes('CREATE INDEX IF NOT EXISTS') ||
+    processed.includes('CREATE UNIQUE INDEX IF NOT EXISTS')) {
+    // Check if we need to process triggers
+    if (!processed.includes('DROP TRIGGER IF EXISTS')) {
+      // Process triggers only
+      return addDropTriggerIfExists(processed);
+    }
+    return processed;
+  }
+
+  // Add IF NOT EXISTS to CREATE TABLE statements (handles backticks)
+  processed = processed.replace(
+    /CREATE TABLE (IF NOT EXISTS )?(`?)([^\s`]+)(`?)/g,
+    (match, ifNotExists, prefix, name, suffix) => {
+      // Skip if already has IF NOT EXISTS
+      if (ifNotExists) return match;
+      return `CREATE TABLE IF NOT EXISTS ${prefix}${name}${suffix}`;
+    }
+  );
+
+  // Add IF NOT EXISTS to CREATE INDEX statements
+  processed = processed.replace(
+    /CREATE INDEX (IF NOT EXISTS )?(`?)([^\s`]+)(`?)/g,
+    (match, ifNotExists, prefix, name, suffix) => {
+      if (ifNotExists) return match;
+      return `CREATE INDEX IF NOT EXISTS ${prefix}${name}${suffix}`;
+    }
+  );
+
+  // Add IF NOT EXISTS to CREATE UNIQUE INDEX statements
+  processed = processed.replace(
+    /CREATE UNIQUE INDEX (IF NOT EXISTS )?(`?)([^\s`]+)(`?)/g,
+    (match, ifNotExists, prefix, name, suffix) => {
+      if (ifNotExists) return match;
+      return `CREATE UNIQUE INDEX IF NOT EXISTS ${prefix}${name}${suffix}`;
+    }
+  );
+
+  // Add IF NOT EXISTS to CREATE VIRTUAL TABLE statements
+  processed = processed.replace(
+    /CREATE VIRTUAL TABLE (IF NOT EXISTS )?([^\s]+)/g,
+    (match, ifNotExists, name) => {
+      if (ifNotExists) return match;
+      return `CREATE VIRTUAL TABLE IF NOT EXISTS ${name}`;
+    }
+  );
+
+  // Process triggers
+  processed = addDropTriggerIfExists(processed);
+
+  return processed;
+}
+
+/**
+ * Adds DROP TRIGGER IF EXISTS before each CREATE TRIGGER statement
+ */
+function addDropTriggerIfExists(sqlContent: string): string {
+  let processed = sqlContent;
+
+  // Pattern to match CREATE TRIGGER statements with optional backticks
+  const triggerPattern = /CREATE TRIGGER (`?)(\w+)(`?)\s+(AFTER|BEFORE|INSTEAD OF)\s+(INSERT|UPDATE|DELETE)/g;
+  const triggers: Array<{ name: string; prefix: string; suffix: string; index: number }> = [];
+  let match;
+
+  // Find all CREATE TRIGGER statements
+  while ((match = triggerPattern.exec(processed)) !== null) {
+    const triggerName = match[2];
+    const prefix = match[1] || '';
+    const suffix = match[3] || '';
+
+    // Check if DROP TRIGGER IF EXISTS already exists before this CREATE TRIGGER
+    const startPos = Math.max(0, match.index - 300);
+    const beforeTrigger = processed.substring(startPos, match.index);
+    const dropPattern = new RegExp(
+      `DROP TRIGGER IF EXISTS\\s+${prefix.replace(/`/g, '`?')}${triggerName}${suffix.replace(/`/g, '`?')}`,
+      'i'
+    );
+
+    if (!dropPattern.test(beforeTrigger)) {
+      triggers.push({
+        name: triggerName,
+        prefix,
+        suffix,
+        index: match.index
+      });
+    }
+  }
+
+  // Insert DROP TRIGGER IF EXISTS before each CREATE TRIGGER (in reverse order to preserve indices)
+  for (let i = triggers.length - 1; i >= 0; i--) {
+    const trigger = triggers[i];
+    const formattedName = trigger.prefix
+      ? `${trigger.prefix}${trigger.name}${trigger.suffix}`
+      : trigger.name;
+    const dropStatement = `DROP TRIGGER IF EXISTS ${formattedName};\n--> statement-breakpoint\n`;
+    processed = processed.slice(0, trigger.index) + dropStatement + processed.slice(trigger.index);
+  }
+
+  return processed;
+}
 
 const FTS5_MIGRATION = `
 -- FTS5 Full-Text Search Setup
@@ -63,6 +173,7 @@ DROP TRIGGER IF EXISTS files_fts_delete;
 --> statement-breakpoint
 
 -- Trigger: Insert new gist into FTS5 table
+-- Note: SQLite doesn't support IF NOT EXISTS for triggers, so we use DROP IF EXISTS above
 CREATE TRIGGER gists_fts_insert AFTER INSERT ON gists
 BEGIN
   INSERT INTO gists_fts(gist_id, title, description, owner_handle, owner_display_name, file_content)
@@ -150,7 +261,7 @@ console.log('Running drizzle-kit generate...\n');
 try {
   execSync('drizzle-kit generate', { stdio: 'inherit' });
 
-  console.log('\nChecking for FTS5 setup in migrations...\n');
+  console.log('\nProcessing generated SQL files to add IF NOT EXISTS...\n');
 
   const drizzleDir = join(process.cwd(), 'drizzle');
 
@@ -167,6 +278,21 @@ try {
     console.log('No migration files found.');
     process.exit(0);
   }
+
+  // Process all SQL files to add IF NOT EXISTS
+  console.log('Adding IF NOT EXISTS to CREATE statements...');
+  for (const file of files) {
+    const filePath = join(drizzleDir, file);
+    const content = readFileSync(filePath, 'utf-8');
+    const processed = addIfNotExistsToSql(content);
+
+    if (content !== processed) {
+      writeFileSync(filePath, processed, 'utf-8');
+      console.log(`  ✓ Updated: ${file}`);
+    }
+  }
+
+  console.log('\nChecking for FTS5 setup in migrations...\n');
 
   const latestMigration = files[files.length - 1];
   const migrationPath = join(drizzleDir, latestMigration);
