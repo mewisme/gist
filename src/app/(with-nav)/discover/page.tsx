@@ -1,13 +1,10 @@
 import { Code } from 'lucide-react';
-import { Metadata } from 'next';
-import Link from 'next/link';
-
-import { SortDropdown } from '@/components/discover/sort-dropdown';
 import { GistDiscoverCard } from '@/components/gist/gist-discover-card';
-import { Button } from '@/components/ui/button';
-import { getCurrentUser } from '@/lib/auth';
-import { generateMetadata as genMetadata } from '@/lib/metadata-utils';
 import { GistRepository } from '@/lib/repositories/gist-repository';
+import { Metadata } from 'next';
+import { SortDropdown } from '@/components/discover/sort-dropdown';
+import { generateMetadata as genMetadata } from '@/lib/metadata-utils';
+import { getCurrentUser } from '@/lib/auth';
 
 const gistRepository = new GistRepository();
 

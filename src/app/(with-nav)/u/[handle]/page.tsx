@@ -1,18 +1,19 @@
-import { formatDistanceToNow } from 'date-fns';
-import { eq } from 'drizzle-orm';
-import { Calendar, Code, GitFork, Star } from 'lucide-react';
-import Link from 'next/link';
-import { notFound } from 'next/navigation';
-
-import { GistUserCard } from '@/components/gist/gist-user-card';
-import { SubscribeToUserButton } from '@/components/gist/subscribe-to-user-button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
+import { Calendar, Code, GitFork, Star } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { UserSortDropdown } from '@/components/user/user-sort-dropdown';
 import { db, users } from '@/lib/db';
-import { generateMetadata as genMetadata } from '@/lib/metadata-utils';
+
+import { Button } from '@/components/ui/button';
 import { GistRepository } from '@/lib/repositories/gist-repository';
+import { GistUserCard } from '@/components/gist/gist-user-card';
+import Link from 'next/link';
+import { SubscribeToUserButton } from '@/components/gist/subscribe-to-user-button';
+import { UserSortDropdown } from '@/components/user/user-sort-dropdown';
+import { eq } from 'drizzle-orm';
+import { formatDistanceToNow } from 'date-fns';
+import { generateMetadata as genMetadata } from '@/lib/metadata-utils';
+import { getCurrentUser } from '@/lib/auth';
+import { notFound } from 'next/navigation';
 
 const gistRepository = new GistRepository();
 
@@ -88,11 +89,12 @@ export default async function UserProfilePage({
   const itemsPerPage = 10;
   const offset = (page - 1) * itemsPerPage;
 
-  const result = await gistRepository.getGistsByUser(user.id, itemsPerPage, offset, sortBy);
+  const currentUser = await getCurrentUser();
+
+  const result = await gistRepository.getGistsByUser(user.id, itemsPerPage, offset, sortBy, currentUser?.id);
   const { gists, total } = result;
   const totalPages = Math.ceil(total / itemsPerPage);
 
-  // Get all gists for stats (only if total is reasonable to avoid loading too many)
   let publicCount = 0;
   let secretCount = 0;
   let totalStars = 0;

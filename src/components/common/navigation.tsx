@@ -48,7 +48,7 @@ export function Navigation() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem asChild>
-                      <Link href="/g/new" className="flex items-center gap-2">
+                      <Link href="/" className="flex items-center gap-2">
                         <FileText className="h-4 w-4" />
                         Create New Gist
                       </Link>
@@ -153,7 +153,7 @@ export function Navigation() {
 
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem asChild>
-                      <Link href="/g/new" className="flex items-center gap-2">
+                      <Link href="/" className="flex items-center gap-2">
                         <FileText className="h-4 w-4" />
                         Create New Gist
                       </Link>

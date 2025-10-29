@@ -1,10 +1,9 @@
+import type { File, Gist, GistDetails, GistOwner, Revision, RevisionFile, User } from '../db/schema';
 import { and, asc, count, desc, eq, inArray, or, sql } from 'drizzle-orm';
+import { comments, files, gists, revisionFiles, revisions, users } from '../db/schema';
+import { db, sqlite } from '../db';
 
 import { generateId } from '@/lib/id-utils';
-
-import { db, sqlite } from '../db';
-import type { File, Gist, GistDetails, GistOwner, Revision, RevisionFile, User } from '../db/schema';
-import { comments, files, gists, revisionFiles, revisions, users } from '../db/schema';
 import { notificationService } from '../services/notification-service';
 
 export class GistRepository {
@@ -203,7 +202,8 @@ export class GistRepository {
     userId: string,
     limit = 20,
     offset = 0,
-    sortBy: 'recently-created' | 'recently-updated' | 'least-recently-created' | 'least-recently-updated' = 'recently-created'
+    sortBy: 'recently-created' | 'recently-updated' | 'least-recently-created' | 'least-recently-updated' = 'recently-created',
+    currentUserId?: string
   ): Promise<{ gists: GistDetails[], total: number }> {
     let orderBy;
     switch (sortBy) {
@@ -230,6 +230,16 @@ export class GistRepository {
 
     const total = totalResult.count;
 
+    const visibilityCondition = currentUserId === userId
+      ? or(
+        eq(gists.visibility, 'public'),
+        and(
+          eq(gists.visibility, 'secret'),
+          eq(gists.ownerId, currentUserId)
+        )
+      )
+      : eq(gists.visibility, 'public');
+
     const gistResults = await db
       .select({
         gist: gists,
@@ -239,7 +249,7 @@ export class GistRepository {
       .from(gists)
       .leftJoin(users, eq(users.id, gists.ownerId))
       .leftJoin(comments, eq(comments.gistId, gists.id))
-      .where(eq(gists.ownerId, userId))
+      .where(and(eq(gists.ownerId, userId), visibilityCondition))
       .groupBy(gists.id, users.id)
       .orderBy(orderBy)
       .limit(limit)
@@ -602,11 +612,11 @@ export class GistRepository {
    */
   async searchGists(query: string, limit = 20, offset = 0, userId?: string): Promise<GistDetails[]> {
     const ftsQuery = query
-      .replace(/['"*]/g, ' ')  // Remove FTS5 special characters
+      .replace(/['"*]/g, ' ')
       .trim()
       .split(/\s+/)
       .filter(term => term.length > 0)
-      .map(term => `"${term}"*`)  // Prefix match for each term
+      .map(term => `"${term}"*`)
       .join(' OR ');
 
     if (!ftsQuery) {
@@ -663,7 +673,7 @@ export class GistRepository {
     gistResults.sort((a, b) => {
       const rankA = rankMap.get(a.gist.id) || 0;
       const rankB = rankMap.get(b.gist.id) || 0;
-      return rankA - rankB; // Lower rank is better in FTS5
+      return rankA - rankB;
     });
 
     const gistIds = gistResults.map(r => r.gist.id);
