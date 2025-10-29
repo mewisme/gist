@@ -107,9 +107,6 @@ export default async function DiscoverPage({
                 : 'Be the first to create a public gist!'
               }
             </p>
-            <Button asChild>
-              <Link href="/signin">Sign In to Create Your First Gist</Link>
-            </Button>
           </div>
         ) : (
           <div className="grid gap-4 md:gap-6 grid-cols-1 max-w-4xl mx-auto">

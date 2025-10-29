@@ -30,7 +30,7 @@ try {
   // STEP 2: Add FTS5 search functionality
   // ==================================================================
   console.log('[2/4] Step 2: FTS5 Full-Text Search Migration');
-  
+
   const checkFts = db.prepare(
     "SELECT name FROM sqlite_master WHERE type='table' AND name='gists_fts'"
   ).get();
@@ -61,7 +61,7 @@ try {
   // STEP 3: Add subscriptions and notifications tables
   // ==================================================================
   console.log('[3/4] Step 3: Subscriptions & Notifications Migration');
-  
+
   const checkSubscriptions = db.prepare(
     "SELECT name FROM sqlite_master WHERE type='table' AND name='subscriptions'"
   ).get();
@@ -145,11 +145,11 @@ try {
   // STEP 4: Update notifications to support user_followed type
   // ==================================================================
   console.log('[4/4] Step 4: User Followed Notification Type');
-  
+
   // Check if user_followed is already supported
   const tableInfo = db.pragma('table_info(notifications)') as Array<{ name: string; type: string }>;
   const typeColumn = tableInfo.find(col => col.name === 'type');
-  
+
   if (typeColumn && typeColumn.type.includes('user_followed')) {
     console.log('      [SKIP] user_followed type already supported - skipping\n');
   } else {
@@ -207,13 +207,13 @@ try {
   // Final verification
   // ==================================================================
   console.log('>> Final Verification');
-  
+
   const tables = [
     'gists_fts',
-    'subscriptions', 
+    'subscriptions',
     'notifications'
   ];
-  
+
   const allExist = tables.every(table => {
     const result = db.prepare(
       `SELECT name FROM sqlite_master WHERE type='table' AND name=?`
@@ -223,12 +223,12 @@ try {
 
   if (allExist) {
     console.log('   [✓] All required tables exist');
-    
+
     // Count records
     const gistCount = db.prepare('SELECT COUNT(*) as count FROM gists_fts').get() as { count: number };
     const subsCount = db.prepare('SELECT COUNT(*) as count FROM subscriptions').get() as { count: number };
     const notifCount = db.prepare('SELECT COUNT(*) as count FROM notifications').get() as { count: number };
-    
+
     console.log(`   [✓] FTS5: ${gistCount.count} indexed gists`);
     console.log(`   [✓] Subscriptions: ${subsCount.count} active`);
     console.log(`   [✓] Notifications: ${notifCount.count} total`);
@@ -237,7 +237,7 @@ try {
   }
 
   db.close();
-  
+
   console.log('\n[SUCCESS] All migrations completed successfully!\n');
 
 } catch (error) {
